@@ -4324,6 +4324,10 @@ body.dark .cur-auto-card #cur-auto-month{background:#1a1d2e;border-color:#2a2d40
 
         <details class="cur-pat-card">
           <summary>Top problemas activos (ICPC-2) <span class="cur-pat-hint">10 mais frequentes na lista</span></summary>
+          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:8px">
+            <button type="button" class="btn-c cur-auto-refresh" onclick="dxCurIcpcImportSOAP()" title="Agrega os códigos ICPC-2 dos SOAP gerados neste internato. Lê só do índice do Internato — nunca dados do utente.">↻ Importar do SOAP</button>
+            <span id="cur-icpc-soap-status" class="cur-pat-hint" style="margin-left:0"></span>
+          </div>
           <table class="cur-icpc-tbl" id="cur-icpc-tbl" aria-label="Top problemas activos por código ICPC-2">
             <thead><tr><th scope="col">#</th><th scope="col">Cód.</th><th scope="col">Descrição</th><th scope="col">N.º</th><th scope="col">%</th></tr></thead>
             <tbody id="cur-icpc-tbody"></tbody>
@@ -11688,6 +11692,63 @@ function relAdd(el, kind){
     dxLogToast(msg, noEstagio);
   }
 
+  // ══════════════════════════════════════════════════════════════════════
+  // ÍNDICE SOAP→CURRÍCULO — Fase 7 (Opção 3)
+  // ----------------------------------------------------------------------
+  // Espelha, no momento de window.generate(), os códigos ICPC-2/CIE-10
+  // anexados aos campos de DIAGNÓSTICO do SOAP para um índice próprio do
+  // Internato (dx_int_soap_idx_v1). De-identificado: guarda apenas código,
+  // label da rubrica, tipo de encontro, estágio e data — NUNCA nome/idade
+  // ou outra PII do utente, e NUNCA lê dx_autosave_v1. O Currículo (tab C,
+  // top problemas ICPC-2) agrega deste índice. Append-only, com cap.
+  // Os códigos são embebidos pelo autocomplete no formato "[CIE/ICPC] Nome".
+  // ══════════════════════════════════════════════════════════════════════
+  var KEY_SOAP_IDX = 'dx_int_soap_idx_v1';
+  // Campos do SOAP cujo conteúdo é um diagnóstico/problema activo do utente.
+  var SOAP_IDX_FIELDS = ['ia-dp', 'ia-ds', 'cit-d'];
+  // Prefixo do autocomplete CIE-10/ICPC-2: "[CIE/ICPC] Nome — resto"
+  var SOAP_IDX_RE = /\[([A-Z0-9.\/]+)\/([A-Z0-9]+)\]\s*([^—\n]*)/;
+
+  function soapIdxList(){
+    try { return JSON.parse(lsGet(KEY_SOAP_IDX, '[]')) || []; } catch(e){ return []; }
+  }
+  function soapIdxSet(list){ lsSet(KEY_SOAP_IDX, JSON.stringify(list)); }
+  // Exposto para o módulo do Currículo (IIFE separado) ler o índice.
+  window.dxSoapIdxList = soapIdxList;
+
+  // Chamada após cada window.generate(). Extrai códigos ICPC-2/CIE-10 dos
+  // campos de diagnóstico e acrescenta ao índice (de-identificado).
+  function dxSoapIdxCapture(){
+    var enc = window.enc || '';
+    if (!enc) return;
+    var estagio = lsGet(KEY_LOG_ESTAGIO, '') || INT_ESTAGIOS[0].id;
+    var data = lbToday();
+    var ts = Date.now();
+    var list = soapIdxList();
+    var added = 0;
+    SOAP_IDX_FIELDS.forEach(function(fid){
+      var el = document.getElementById(fid);
+      if (!el) return;
+      var v = (el.value || '').trim();
+      if (!v) return;
+      var m = v.match(SOAP_IDX_RE);
+      if (!m) return; // sem código anexado: texto livre, ignora
+      list.unshift({
+        id: 's' + ts + '_' + fid,
+        ts: ts, data: data, enc: enc, estagio: estagio,
+        campo: fid,
+        cie: m[1].toUpperCase(),
+        icpc: m[2].toUpperCase(),
+        label: (m[3] || '').trim().slice(0, 80),
+        src: 'soap'
+      });
+      added++;
+    });
+    if (!added) return;
+    if (list.length > 5000) list = list.slice(0, 5000);
+    soapIdxSet(list);
+  }
+
   // Patch window.generate para auto-contabilizar logo após gerar.
   function patchGenerateForLogbook(){
     if (typeof window.generate !== 'function') return;
@@ -11696,6 +11757,7 @@ function relAdd(el, kind){
     window.generate = function(){
       var r = orig.apply(this, arguments);
       try { dxLogAutoFromSOAP(); } catch(e){ console.warn('[dx-int-log auto]', e); }
+      try { dxSoapIdxCapture(); } catch(e){ console.warn('[dx-int-soapidx]', e); }
       return r;
     };
     window._dxIntLogPatched = true;
@@ -12843,6 +12905,55 @@ function relAdd(el, kind){
     }
     tbody.innerHTML = html;
   }
+
+  // ── Fase 7 — importar top problemas ICPC-2 do índice SOAP ─────────────
+  // Agrega o índice dx_int_soap_idx_v1 (alimentado por window.generate no
+  // modo SOAP) por código ICPC-2 e preenche as linhas do quadro. O N.º é a
+  // CONTAGEM DE REGISTOS SOAP, não utentes distintos (o índice é
+  // de-identificado e não tem identificador de utente) — clarificado na
+  // barra de estado. Acção explícita do utente; preserva linhas sem dados
+  // importados (override manual).
+  function dxCurIcpcImportSOAP(){
+    var list = [];
+    try { list = (typeof window.dxSoapIdxList === 'function' ? window.dxSoapIdxList() : []) || []; } catch(_){ list = []; }
+    var statusEl = document.getElementById('cur-icpc-soap-status');
+    if (!list.length){
+      if (statusEl) statusEl.textContent = 'Sem registos SOAP com ICPC-2 anexado. Gere notas no modo SOAP com diagnóstico via autocomplete CIE-10/ICPC-2.';
+      return;
+    }
+    var agg = {};
+    list.forEach(function(r){
+      if (!r || !r.icpc) return;
+      var a = agg[r.icpc] || (agg[r.icpc] = { icpc:r.icpc, n:0, labels:{} });
+      a.n++;
+      var lab = (r.label || '').trim();
+      if (lab) a.labels[lab] = (a.labels[lab] || 0) + 1;
+    });
+    var top = Object.keys(agg).map(function(k){
+      var a = agg[k], best = '', bestC = 0;
+      Object.keys(a.labels).forEach(function(l){ if (a.labels[l] > bestC){ bestC = a.labels[l]; best = l; } });
+      return { icpc:a.icpc, n:a.n, desc:best };
+    }).sort(function(x, y){ return y.n - x.n; }).slice(0, CUR_ICPC_ROWS);
+
+    for (var i = 1; i <= CUR_ICPC_ROWS; i++){
+      var row = top[i-1];
+      if (!row) continue; // sem dados importados: não mexe na linha (override manual)
+      var codEl = document.getElementById('cur-icpc-'+i+'-cod');
+      var descEl = document.getElementById('cur-icpc-'+i+'-desc');
+      var nEl = document.getElementById('cur-icpc-'+i+'-n');
+      if (codEl) codEl.value = row.icpc;
+      if (descEl) descEl.value = row.desc;
+      if (nEl) nEl.value = row.n;
+    }
+    if (typeof _curSaveDeb === 'function') _curSaveDeb();
+    dxCurIcpcRender();
+    if (statusEl){
+      var nCodes = Object.keys(agg).length;
+      statusEl.textContent = 'Importados ' + Math.min(nCodes, CUR_ICPC_ROWS) + ' de ' + nCodes
+        + ' códigos · ' + list.length + ' registos SOAP. N.º = contagem de registos (não utentes distintos) — ajuste manualmente se necessário.';
+    }
+  }
+  window.dxCurIcpcImportSOAP = dxCurIcpcImportSOAP;
 
   // ── Fase 6.3 — render % e barras ──────────────────────────────────────
   function _curRenderIndic(prefix, indicators){
