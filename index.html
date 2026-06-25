@@ -4324,8 +4324,9 @@ body.dark .cur-auto-card #cur-auto-month{background:#1a1d2e;border-color:#2a2d40
 
         <details class="cur-pat-card">
           <summary>Top problemas activos (ICPC-2) <span class="cur-pat-hint">10 mais frequentes na lista</span></summary>
+          <p class="cur-lead-note" style="margin:0 0 8px">Preencha com os <strong>dados da auditoria da sua lista</strong> (MIM@UF/SClínico) — o denominador é o total de utentes inscritos. Em alternativa, o botão abaixo <strong>sugere</strong> a partir da sua casuística (problemas que registou em consulta no SOAP): é a frequência <em>vista por si</em>, não a prevalência da lista — ajuste depois.</p>
           <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:8px">
-            <button type="button" class="btn-c cur-auto-refresh" onclick="dxCurIcpcImportSOAP()" title="Agrega os códigos ICPC-2 dos SOAP gerados neste internato. Lê só do índice do Internato — nunca dados do utente.">↻ Importar do SOAP</button>
+            <button type="button" class="btn-c cur-auto-refresh" onclick="dxCurIcpcImportSOAP()" title="Sugere os 10 problemas ICPC-2 mais frequentes na SUA casuística (SOAP gerados). Não é a prevalência da lista — é o que você viu em consulta. Lê só do índice do Internato, nunca dados do utente.">↻ Sugerir da minha casuística (SOAP)</button>
             <span id="cur-icpc-soap-status" class="cur-pat-hint" style="margin-left:0"></span>
           </div>
           <table class="cur-icpc-tbl" id="cur-icpc-tbl" aria-label="Top problemas activos por código ICPC-2">
@@ -12949,8 +12950,8 @@ function relAdd(el, kind){
     dxCurIcpcRender();
     if (statusEl){
       var nCodes = Object.keys(agg).length;
-      statusEl.textContent = 'Importados ' + Math.min(nCodes, CUR_ICPC_ROWS) + ' de ' + nCodes
-        + ' códigos · ' + list.length + ' registos SOAP. N.º = contagem de registos (não utentes distintos) — ajuste manualmente se necessário.';
+      statusEl.textContent = 'Sugeridos ' + Math.min(nCodes, CUR_ICPC_ROWS) + ' de ' + nCodes
+        + ' códigos da sua casuística · ' + list.length + ' encontros. N.º = encontros que registou no SOAP (não a prevalência da lista) — ajuste para os dados de auditoria.';
     }
   }
   window.dxCurIcpcImportSOAP = dxCurIcpcImportSOAP;
