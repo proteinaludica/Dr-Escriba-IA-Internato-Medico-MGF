@@ -4292,6 +4292,23 @@ body.dark .cur-auto-card #cur-auto-month{background:#1a1d2e;border-color:#2a2d40
           <svg id="cur-auto-month" viewBox="0 0 600 220" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Actividade mensal"></svg>
         </details>
       </div>
+
+      <div class="cur-fld">
+        <label>A minha casuística <span class="opt">leitura automática dos SOAP que gerou</span></label>
+        <details class="cur-pat-card cur-auto-card">
+          <summary>Problemas que registou em consulta (ICPC-2) <span class="cur-pat-hint">computado dos seus SOAP</span></summary>
+          <p class="cur-lead-note" style="margin:0 0 8px">Frequência dos problemas que <strong>você</strong> registou em consulta no modo SOAP, por código ICPC-2. São <strong>encontros que fez</strong> — a sua actividade clínica — e <em>não</em> utentes da lista nem a prevalência da lista (esses são o quadro acima, manual). De-identificado: nunca guarda dados do utente.</p>
+          <div class="cur-auto-actions">
+            <button type="button" class="btn-c cur-auto-refresh" onclick="dxCurCasuisticaRender()" title="Recomputar a partir dos SOAP gerados (índice do Internato)">↻ Actualizar</button>
+            <span id="cur-cas-status" class="cur-pat-hint" style="margin-left:0"></span>
+          </div>
+          <table class="cur-icpc-tbl" aria-label="Casuística do interno por código ICPC-2">
+            <thead><tr><th scope="col">#</th><th scope="col">Cód.</th><th scope="col">Descrição</th><th scope="col">Encontros</th><th scope="col">%</th></tr></thead>
+            <tbody id="cur-cas-tbody"></tbody>
+            <tfoot><tr><th scope="row" colspan="3">Total de encontros codificados</th><th id="cur-cas-tot">0</th><th></th></tr></tfoot>
+          </table>
+        </details>
+      </div>
       <div class="cur-fld">
         <label>Consulta de saúde do adulto e idoso</label>
         <textarea id="cur-act-adultoidoso" rows="4"></textarea>
@@ -4324,6 +4341,7 @@ body.dark .cur-auto-card #cur-auto-month{background:#1a1d2e;border-color:#2a2d40
 
         <details class="cur-pat-card">
           <summary>Top problemas activos (ICPC-2) <span class="cur-pat-hint">10 mais frequentes na lista</span></summary>
+          <p class="cur-lead-note" style="margin:0 0 8px">Contagem de <strong>utentes distintos da lista</strong> por problema (não de encontros) — preencha com os dados da auditoria da sua lista (MIM@UF/SClínico). O denominador é o total de utentes inscritos.</p>
           <table class="cur-icpc-tbl" id="cur-icpc-tbl" aria-label="Top problemas activos por código ICPC-2">
             <thead><tr><th scope="col">#</th><th scope="col">Cód.</th><th scope="col">Descrição</th><th scope="col">N.º</th><th scope="col">%</th></tr></thead>
             <tbody id="cur-icpc-tbody"></tbody>
@@ -11688,6 +11706,63 @@ function relAdd(el, kind){
     dxLogToast(msg, noEstagio);
   }
 
+  // ══════════════════════════════════════════════════════════════════════
+  // ÍNDICE SOAP→CURRÍCULO — Fase 7 (Opção 3)
+  // ----------------------------------------------------------------------
+  // Espelha, no momento de window.generate(), os códigos ICPC-2/CIE-10
+  // anexados aos campos de DIAGNÓSTICO do SOAP para um índice próprio do
+  // Internato (dx_int_soap_idx_v1). De-identificado: guarda apenas código,
+  // label da rubrica, tipo de encontro, estágio e data — NUNCA nome/idade
+  // ou outra PII do utente, e NUNCA lê dx_autosave_v1. O Currículo (tab C,
+  // top problemas ICPC-2) agrega deste índice. Append-only, com cap.
+  // Os códigos são embebidos pelo autocomplete no formato "[CIE/ICPC] Nome".
+  // ══════════════════════════════════════════════════════════════════════
+  var KEY_SOAP_IDX = 'dx_int_soap_idx_v1';
+  // Campos do SOAP cujo conteúdo é um diagnóstico/problema activo do utente.
+  var SOAP_IDX_FIELDS = ['ia-dp', 'ia-ds', 'cit-d'];
+  // Prefixo do autocomplete CIE-10/ICPC-2: "[CIE/ICPC] Nome — resto"
+  var SOAP_IDX_RE = /\[([A-Z0-9.\/]+)\/([A-Z0-9]+)\]\s*([^—\n]*)/;
+
+  function soapIdxList(){
+    try { return JSON.parse(lsGet(KEY_SOAP_IDX, '[]')) || []; } catch(e){ return []; }
+  }
+  function soapIdxSet(list){ lsSet(KEY_SOAP_IDX, JSON.stringify(list)); }
+  // Exposto para o módulo do Currículo (IIFE separado) ler o índice.
+  window.dxSoapIdxList = soapIdxList;
+
+  // Chamada após cada window.generate(). Extrai códigos ICPC-2/CIE-10 dos
+  // campos de diagnóstico e acrescenta ao índice (de-identificado).
+  function dxSoapIdxCapture(){
+    var enc = window.enc || '';
+    if (!enc) return;
+    var estagio = lsGet(KEY_LOG_ESTAGIO, '') || INT_ESTAGIOS[0].id;
+    var data = lbToday();
+    var ts = Date.now();
+    var list = soapIdxList();
+    var added = 0;
+    SOAP_IDX_FIELDS.forEach(function(fid){
+      var el = document.getElementById(fid);
+      if (!el) return;
+      var v = (el.value || '').trim();
+      if (!v) return;
+      var m = v.match(SOAP_IDX_RE);
+      if (!m) return; // sem código anexado: texto livre, ignora
+      list.unshift({
+        id: 's' + ts + '_' + fid,
+        ts: ts, data: data, enc: enc, estagio: estagio,
+        campo: fid,
+        cie: m[1].toUpperCase(),
+        icpc: m[2].toUpperCase(),
+        label: (m[3] || '').trim().slice(0, 80),
+        src: 'soap'
+      });
+      added++;
+    });
+    if (!added) return;
+    if (list.length > 5000) list = list.slice(0, 5000);
+    soapIdxSet(list);
+  }
+
   // Patch window.generate para auto-contabilizar logo após gerar.
   function patchGenerateForLogbook(){
     if (typeof window.generate !== 'function') return;
@@ -11696,6 +11771,7 @@ function relAdd(el, kind){
     window.generate = function(){
       var r = orig.apply(this, arguments);
       try { dxLogAutoFromSOAP(); } catch(e){ console.warn('[dx-int-log auto]', e); }
+      try { dxSoapIdxCapture(); } catch(e){ console.warn('[dx-int-soapidx]', e); }
       return r;
     };
     window._dxIntLogPatched = true;
@@ -12844,6 +12920,53 @@ function relAdd(el, kind){
     tbody.innerHTML = html;
   }
 
+  // ── Fase 7 — vista da casuística do interno (ICPC-2) a partir do SOAP ──
+  // Lê o índice dx_int_soap_idx_v1 (alimentado por window.generate no modo
+  // SOAP), agrega por código ICPC-2 e RENDERIZA uma tabela read-only. São
+  // ENCONTROS que o interno registou (a sua casuística) — a sua actividade
+  // clínica —, NÃO utentes da lista nem prevalência (esses são os quadros
+  // de lista, manuais). O índice é de-identificado: nunca guarda PII do
+  // utente. Vista separada, não escreve em nenhum campo do Currículo.
+  function dxCurCasuisticaRender(){
+    var tbody = document.getElementById('cur-cas-tbody');
+    if (!tbody) return;
+    var statusEl = document.getElementById('cur-cas-status');
+    var totEl = document.getElementById('cur-cas-tot');
+    var list = [];
+    try { list = (typeof window.dxSoapIdxList === 'function' ? window.dxSoapIdxList() : []) || []; } catch(_){ list = []; }
+    if (!list.length){
+      tbody.innerHTML = '<tr class="cur-auto-empty"><td colspan="5">Sem encontros codificados. No modo SOAP, anexe um diagnóstico via autocomplete CIE-10/ICPC-2 e gere a nota.</td></tr>';
+      if (totEl) totEl.textContent = '0';
+      if (statusEl) statusEl.textContent = '';
+      return;
+    }
+    var agg = {}, tot = 0;
+    list.forEach(function(r){
+      if (!r || !r.icpc) return;
+      var a = agg[r.icpc] || (agg[r.icpc] = { icpc:r.icpc, n:0, labels:{} });
+      a.n++; tot++;
+      var lab = (r.label || '').trim();
+      if (lab) a.labels[lab] = (a.labels[lab] || 0) + 1;
+    });
+    var rows = Object.keys(agg).map(function(k){
+      var a = agg[k], best = '', bestC = 0;
+      Object.keys(a.labels).forEach(function(l){ if (a.labels[l] > bestC){ bestC = a.labels[l]; best = l; } });
+      return { icpc:a.icpc, n:a.n, desc:best };
+    }).sort(function(x, y){ return y.n - x.n; }).slice(0, 25);
+
+    tbody.innerHTML = rows.map(function(r, i){
+      var pct = tot > 0 ? (100 * r.n / tot).toFixed(1) + '%' : '—';
+      return '<tr><td>' + (i+1) + '</td><td>' + _curEsc(r.icpc) + '</td><td>' + _curEsc(r.desc || '—')
+        + '</td><td>' + r.n + '</td><td>' + pct + '</td></tr>';
+    }).join('');
+    if (totEl) totEl.textContent = tot;
+    if (statusEl){
+      statusEl.textContent = Object.keys(agg).length + ' problemas distintos · ' + tot
+        + ' encontros codificados. São encontros que registou no SOAP, não utentes da lista.';
+    }
+  }
+  window.dxCurCasuisticaRender = dxCurCasuisticaRender;
+
   // ── Fase 6.3 — render % e barras ──────────────────────────────────────
   function _curRenderIndic(prefix, indicators){
     var denEl = document.getElementById('cur-'+prefix+'-1');
@@ -13619,6 +13742,7 @@ function relAdd(el, kind){
     try { dxCurPyramidRender(); } catch(_){}
     try { dxCurDm2Render(); dxCurHtaRender(); dxCurIcpcRender(); } catch(_){}
     try { dxCurAutoRender(); } catch(_){}
+    try { dxCurCasuisticaRender(); } catch(_){}
 
     var o = curLoad();
     var nome = (o['cur-id-nome'] || '').trim();
@@ -13811,6 +13935,7 @@ function relAdd(el, kind){
     try { dxCurPyramidRender(); dxCurGraffarRender(); dxCurDuvallRender(); } catch(_){}
     try { dxCurDm2Render(); dxCurHtaRender(); dxCurIcpcRender(); } catch(_){}
     try { dxCurAutoRender(); } catch(_){}
+    try { dxCurCasuisticaRender(); } catch(_){}
     curStatus('', false);
 
     // Re-render dos auto-quadros quando o utilizador volta à tab Currículo
@@ -13820,7 +13945,7 @@ function relAdd(el, kind){
         var origIntTab = window.dxIntTab;
         window.dxIntTab = function(id){
           var r = origIntTab.apply(this, arguments);
-          if (id === 'cur') { try { dxCurAutoRender(); } catch(_){} }
+          if (id === 'cur') { try { dxCurAutoRender(); } catch(_){} try { dxCurCasuisticaRender(); } catch(_){} }
           return r;
         };
         window._dxCurAutoTabHook = true;
