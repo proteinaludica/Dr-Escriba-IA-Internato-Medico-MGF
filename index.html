@@ -4413,6 +4413,25 @@ body.dark .cur-auto-card #cur-auto-month{background:#1a1d2e;border-color:#2a2d40
     <details class="cur-card">
       <summary class="om-h">6 · Reflexão crítica e análise global</summary>
       <div class="cur-fld">
+        <label>Reflexões do Diário <span class="opt">leitura automática das entradas que registou</span></label>
+        <details class="cur-pat-card cur-auto-card">
+          <summary>Registo reflexivo do Diário <span class="cur-pat-hint">computado do Diário</span></summary>
+          <p class="cur-lead-note" style="margin:0 0 8px">Síntese das reflexões que escreveu na tab <strong>Diário</strong>, agregadas por tema (tag), como apoio a esta análise crítica. Leitura automática — <em>não</em> escreve nos campos abaixo. Os textos ficam só no seu browser.</p>
+          <div class="cur-auto-actions">
+            <button type="button" class="btn-c cur-auto-refresh" onclick="dxCurDiarioRender()" title="Recomputar a partir das entradas do Diário">↻ Actualizar</button>
+            <span id="cur-dia-status" class="cur-pat-hint" style="margin-left:0"></span>
+          </div>
+          <h4 class="cur-auto-h">Reflexões por tema (tag)</h4>
+          <table class="cur-icpc-tbl" aria-label="Reflexões do diário por tema">
+            <thead><tr><th scope="col">#</th><th scope="col">Tema (tag)</th><th scope="col">Reflexões</th><th scope="col">%</th></tr></thead>
+            <tbody id="cur-dia-tag-tbody"></tbody>
+            <tfoot><tr><th scope="row" colspan="2">Total de reflexões</th><th id="cur-dia-tot">0</th><th></th></tr></tfoot>
+          </table>
+          <h4 class="cur-auto-h">Entradas recentes</h4>
+          <div id="cur-dia-list"></div>
+        </details>
+      </div>
+      <div class="cur-fld">
         <label>Comentário e análise crítica do internato</label>
         <textarea id="cur-ref-critica" rows="8" placeholder="Reflexão sobre o percurso, dificuldades, aprendizagens, sugestões…"></textarea>
       </div>
@@ -12967,6 +12986,52 @@ function relAdd(el, kind){
   }
   window.dxCurCasuisticaRender = dxCurCasuisticaRender;
 
+  // ── Ponte Diário → Currículo (Secção 6) ───────────────────────────────
+  // Vista read-only das reflexões do Diário (dx_int_diario): total,
+  // agregação por tema (tag) e entradas recentes — apoio à análise
+  // crítica do internato. NÃO escreve em nenhum campo do Currículo; os
+  // textos já viviam (e continuam) só em localStorage. % é a fracção de
+  // reflexões com cada tag (uma entrada pode ter várias tags).
+  function dxCurDiarioRender(){
+    var tagBody = document.getElementById('cur-dia-tag-tbody');
+    var listEl  = document.getElementById('cur-dia-list');
+    if (!tagBody || !listEl) return;
+    var statusEl = document.getElementById('cur-dia-status');
+    var totEl = document.getElementById('cur-dia-tot');
+    var list = [];
+    try { list = JSON.parse(lsGet(KEY_DIA_LIST, '[]')) || []; } catch(_){ list = []; }
+    if (!list.length){
+      tagBody.innerHTML = '<tr class="cur-auto-empty"><td colspan="4">Sem reflexões no Diário. Registe entradas na tab Diário.</td></tr>';
+      listEl.innerHTML = '';
+      if (totEl) totEl.textContent = '0';
+      if (statusEl) statusEl.textContent = '';
+      return;
+    }
+    var tot = list.length;
+    var agg = {};
+    list.forEach(function(e){ (e.tags||[]).forEach(function(t){ agg[t] = (agg[t]||0) + 1; }); });
+    var tags = Object.keys(agg).map(function(k){ return { tag:k, n:agg[k] }; })
+      .sort(function(a, b){ return b.n - a.n; });
+    tagBody.innerHTML = tags.length ? tags.map(function(r, i){
+      var pct = (100 * r.n / tot).toFixed(0) + '%';
+      return '<tr><td>' + (i+1) + '</td><td>' + _curEsc(r.tag) + '</td><td>' + r.n + '</td><td>' + pct + '</td></tr>';
+    }).join('') : '<tr class="cur-auto-empty"><td colspan="4">Reflexões sem temas. Adicione tags no Diário para a síntese por tema.</td></tr>';
+    if (totEl) totEl.textContent = tot;
+    listEl.innerHTML = list.slice(0, 12).map(function(e){
+      var tg = (e.tags||[]).map(function(t){ return '<span class="de-tag">' + _curEsc(t) + '</span>'; }).join('');
+      return '<div style="display:flex;gap:8px;align-items:baseline;flex-wrap:wrap;padding:5px 0;border-top:1px solid var(--cur-border,#e8e2d4)">'
+        + '<span style="font-size:11px;color:var(--muted);min-width:74px">' + _curEsc(e.data || '') + '</span>'
+        + '<span style="font-weight:500;flex:1 1 200px">' + _curEsc(e.titulo || '(sem título)') + '</span>'
+        + (tg ? '<span class="de-tags" style="display:flex;gap:4px;flex-wrap:wrap">' + tg + '</span>' : '')
+        + '</div>';
+    }).join('');
+    if (statusEl){
+      statusEl.textContent = tot + ' reflexões · ' + tags.length + ' temas.'
+        + (tot > 12 ? ' A mostrar as 12 mais recentes.' : '');
+    }
+  }
+  window.dxCurDiarioRender = dxCurDiarioRender;
+
   // ── Fase 6.3 — render % e barras ──────────────────────────────────────
   function _curRenderIndic(prefix, indicators){
     var denEl = document.getElementById('cur-'+prefix+'-1');
@@ -13743,6 +13808,7 @@ function relAdd(el, kind){
     try { dxCurDm2Render(); dxCurHtaRender(); dxCurIcpcRender(); } catch(_){}
     try { dxCurAutoRender(); } catch(_){}
     try { dxCurCasuisticaRender(); } catch(_){}
+    try { dxCurDiarioRender(); } catch(_){}
 
     var o = curLoad();
     var nome = (o['cur-id-nome'] || '').trim();
@@ -13936,6 +14002,7 @@ function relAdd(el, kind){
     try { dxCurDm2Render(); dxCurHtaRender(); dxCurIcpcRender(); } catch(_){}
     try { dxCurAutoRender(); } catch(_){}
     try { dxCurCasuisticaRender(); } catch(_){}
+    try { dxCurDiarioRender(); } catch(_){}
     curStatus('', false);
 
     // Re-render dos auto-quadros quando o utilizador volta à tab Currículo
@@ -13945,7 +14012,7 @@ function relAdd(el, kind){
         var origIntTab = window.dxIntTab;
         window.dxIntTab = function(id){
           var r = origIntTab.apply(this, arguments);
-          if (id === 'cur') { try { dxCurAutoRender(); } catch(_){} try { dxCurCasuisticaRender(); } catch(_){} }
+          if (id === 'cur') { try { dxCurAutoRender(); } catch(_){} try { dxCurCasuisticaRender(); } catch(_){} try { dxCurDiarioRender(); } catch(_){} }
           return r;
         };
         window._dxCurAutoTabHook = true;
