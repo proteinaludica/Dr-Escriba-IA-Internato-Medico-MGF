@@ -103,11 +103,17 @@ Após o incidente da V9f (sessão rebentou com 23 sub-agents paralelos):
 
 ## Roadmap (Fase 1 → Fase N)
 
-- **Fase 1** ✅ — Esqueleto: toggle SOAP/Internato + painel-base com 4 tabs (em curso)
-- **Fase 2** — Logbook OM com rubricas oficiais (Estatuto IM)
-- **Fase 3** — Avaliações estruturadas (orientador, fim de estágio)
-- **Fase 4** — Diário com tags e busca
-- **Fase 5** — Journal Club com bibliografia integrada
+- **Fase 1** ✅ — Esqueleto: toggle SOAP/Internato + painel-base com tabs
+- **Fase 2** ✅ — Logbook OM com rubricas oficiais (Estatuto IM)
+- **Fase 3** ✅ — Avaliações estruturadas (orientador, fim de estágio, anual)
+- **Fase 4** ✅ — Diário com tags e busca (+ ditado de voz, export TXT)
+- **Fase 5** ✅ — Journal Club com bibliografia integrada
+- **Fase 6** ✅ — Currículo estruturado (6 secções, quadros Graffar/Duvall/pirâmide,
+  auto-quadros do logbook, exporter HTML/PDF)
+- **Fase 7** ✅ — Base documental: vistas calculadas read-only a desaguar no
+  Currículo — casuística ICPC-2 do SOAP (Secção 4) + ponte Diário→Currículo
+  (Secção 6). Indicadores da lista (DM2/HTA, top problemas) ficam manuais,
+  por utentes distintos da auditoria (MIM@UF/SClínico).
 - **Fase N** — Sync cloud (opcional, com encriptação local)
 
 ## Não usar tools fora desta whitelist
@@ -121,4 +127,5 @@ Tudo o resto está fora do scope deste projecto:
 
 ---
 
-**Última actualização**: 2026-05-05 (criação do repo, separação de `drescribia`).
+**Última actualização**: 2026-07-01 (Fases 1–7 concluídas: Logbook, Avaliações,
+Diário, Journal Club, Currículo e base documental com vistas calculadas).
