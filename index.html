@@ -275,6 +275,9 @@ body.dark .mic-btn:hover{color:#dde1f0}
 
 /* ═══ HEADER CONTROLS ═══ */
 .hdr-ctrls{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.hdr-eco-back{display:inline-flex;align-items:center;gap:5px;font-size:11px;color:#999;text-decoration:none;margin-bottom:3px;transition:color .15s}
+.hdr-eco-back:hover{color:#ddd;text-decoration:underline}
+.hdr-eco-back:focus-visible{outline:2px solid #bda060;outline-offset:2px;border-radius:3px}
 .hdr-btn{padding:4px 10px;border-radius:5px;font-size:12px;cursor:pointer;border:1px solid rgba(255,255,255,0.2);background:rgba(255,255,255,0.08);color:#ccc;font-family:inherit;transition:all .15s;user-select:none}
 .hdr-btn:hover{background:rgba(255,255,255,0.18);color:#fff}
 .hdr-btn.active{background:rgba(255,255,255,0.25);color:#fff;border-color:rgba(255,255,255,0.4)}
@@ -1110,6 +1113,7 @@ body.dark .cur-auto-card #cur-auto-month{background:#1a1d2e;border-color:#2a2d40
 <div style="border:1px solid var(--bd);border-radius:10px;overflow:hidden">
 <div class="hdr" role="banner">
   <div>
+    <a class="hdr-eco-back" href="https://proteinaludica.com/catalogo" aria-label="Voltar a todos os assistentes da Proteína Lúdica" title="Sair para o catálogo de assistentes. O trabalho fica guardado neste browser."><span aria-hidden="true">&#8592;</span>Todos os assistentes</a>
     <div class="hdr-t" id="hdr-title">Dr. Escriba IA</div>
     <div class="hdr-s" id="hdr-sub">SOAP</div>
   </div>
