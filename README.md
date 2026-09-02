@@ -14,13 +14,14 @@ Geral e Familiar** em Portugal.
 
 - **Privacidade**: tudo fica no browser. Zero servidores, zero analytics.
 - **Não-clínico**: assistente documental. A decisão clínica é do médico.
-- **Single-file**: `index.html` é a aplicação inteira. Funciona em
+- **Single-file**: `app/index.html` é a aplicação inteira. Funciona em
   `file://`, USB, sem build.
 - **PT-PT**: terminologia clínica portuguesa, rubricas OM oficiais.
 
 ## Uso
 
-Abrir `index.html` num browser moderno (Chrome, Edge, Safari, Firefox).
+Abrir `app/index.html` num browser moderno (Chrome, Edge, Safari, Firefox).
+A raiz `index.html` é a página de apresentação pública.
 Toggle SOAP/Internato no canto superior direito.
 
 ## Para developers
