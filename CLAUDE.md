@@ -6,7 +6,7 @@
 
 **Dr. Escriba IA — Edição Internato MGF (v10.0-alpha)**
 
-Aplicação single-file (`index.html`) destinada a **médicos internos da
+Aplicação single-file (`app/index.html`) destinada a **médicos internos da
 especialidade de Medicina Geral e Familiar** em Portugal. É um irmão do
 projecto principal `drescribia` (que serve especialistas), mas com
 funcionalidades específicas do internato:
@@ -31,8 +31,10 @@ automático — é decisão consciente, projecto a projecto.
 
 ## Princípios de arquitectura (não quebrar)
 
-1. **Single-file**: tudo dentro de `index.html`. Sem build, sem split em
-   ficheiros separados. Portabilidade máxima (file://, USB, sem servidor).
+1. **Single-file**: a aplicação vive toda dentro de `app/index.html`. Sem build,
+   sem split em ficheiros separados. Portabilidade máxima (file://, USB, sem
+   servidor). A raiz `index.html` é apenas a página de apresentação pública,
+   servida em internato.proteinaludica.com, e não faz parte da aplicação.
 2. **CSP restritiva**: scripts só de `'self'` + `cdnjs.cloudflare.com`
    (PDF.js, Tesseract OCR). Não introduzir CDNs novos sem actualizar a CSP
    e justificar.
@@ -45,6 +47,9 @@ automático — é decisão consciente, projecto a projecto.
    sem backend, sem analytics. PDFs gerados em memória.
 
 ## File map (linhas aproximadas)
+
+Ficheiros: `index.html` (página de apresentação) e `app/index.html` (aplicação).
+As linhas abaixo referem-se a `app/index.html`.
 
 - **CSS**: linhas 1–530 (variáveis, layout, dark mode, modo Internato a partir de ~451)
 - **HTML SOAP** (header, tabs S/O/P/R, painéis): ~530–7000

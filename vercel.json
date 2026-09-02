@@ -1,0 +1,7 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "installCommand": "echo 'Dr. Escriba IA · Internato — sem dependências de runtime'",
+  "buildCommand": "echo 'Dr. Escriba IA · Internato — site estático, sem passo de build'",
+  "outputDirectory": ".",
+  "trailingSlash": true
+}
